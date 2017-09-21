@@ -33,23 +33,37 @@
   <description>Camel Platforms</description>
   <packaging>pom</packaging>
 
-  <modules>
-    <module>commands</module>
-    <module>karaf</module>
-    <module>spring-boot</module>
-    <!-- dummy/myfoo used for testing catalog -->
-    <module>dummy-component</module>
-    <module>myfoo-connector</module>
-    <!-- run camel-catalog last -->
-    <module>camel-catalog</module>
-    <module>camel-catalog-connector</module>
-    <module>camel-catalog-provider-karaf</module>
-    <module>camel-catalog-provider-springboot</module>
-    <module>camel-catalog-lucene</module>
-    <module>camel-catalog-maven</module>
-    <module>camel-catalog-nexus</module>
-    <module>camel-catalog-rest</module>
-    <module>camel-catalog-rest-app</module>
-  </modules>
+  <profiles>
+    <profile>
+      <id>components</id>
+      <modules>
+        <module>camel-catalog</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>default-modules</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <modules>
+        <module>commands</module>
+        <module>karaf</module>
+        <module>spring-boot</module>
+        <!-- dummy/myfoo used for testing catalog -->
+        <module>dummy-component</module>
+        <module>myfoo-connector</module>
+        <!-- run camel-catalog last -->
+        <module>camel-catalog</module>
+        <module>camel-catalog-connector</module>
+        <module>camel-catalog-provider-karaf</module>
+        <module>camel-catalog-provider-springboot</module>
+        <module>camel-catalog-lucene</module>
+        <module>camel-catalog-maven</module>
+        <module>camel-catalog-nexus</module>
+        <module>camel-catalog-rest</module>
+        <module>camel-catalog-rest-app</module>
+      </modules>
+    </profile>
+  </profiles>
 
 </project>

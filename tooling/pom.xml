@@ -37,17 +37,36 @@
     <camel.osgi.export.pkg />
   </properties>
 
-  <modules>
-    <module>parent</module>
-    <module>spi-annotations</module>
-    <module>json-simple-ordered</module>
-    <module>apt</module>
-    <module>camel-route-parser</module>
-    <module>swagger-rest-dsl-generator</module>
-    <module>maven</module>
-    <module>camel-manual</module>
-  </modules>
-
+  <profiles>
+    <profile>
+      <id>components</id>
+      <modules>
+        <module>parent</module>
+        <module>spi-annotations</module>
+        <module>json-simple-ordered</module>
+        <module>apt</module>
+        <module>camel-route-parser</module>
+        <module>swagger-rest-dsl-generator</module>
+        <module>maven</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>default-modules</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <modules>
+        <module>parent</module>
+        <module>spi-annotations</module>
+        <module>json-simple-ordered</module>
+        <module>apt</module>
+        <module>camel-route-parser</module>
+        <module>swagger-rest-dsl-generator</module>
+        <module>maven</module>
+        <module>camel-manual</module>
+      </modules>
+    </profile>
+  </profiles>
   <!-- profiles>
     <profile>
       <id>build.manual</id>

@@ -137,20 +137,6 @@
     </pluginRepository>
   </pluginRepositories>
 
-  <modules>
-    <module>parent</module>
-    <module>etc</module>
-    <module>buildingtools</module>
-    <module>camel-core</module>
-    <module>components</module>
-    <module>archetypes</module>
-    <module>tooling</module>
-    <module>platforms</module>
-    <module>connectors</module>
-    <module>tests</module>
-    <module>examples</module>
-  </modules>
-
   <scm>
     <connection>scm:git:http://git-wip-us.apache.org/repos/asf/camel.git</connection>
     <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/camel.git</developerConnection>
@@ -321,6 +307,35 @@
   </build>
 
   <profiles>
+    <profile>
+      <id>components</id>
+      <modules>
+        <module>parent</module>
+        <module>camel-core</module>
+        <module>components</module>
+        <module>tooling</module>
+        <module>platforms</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>default-modules</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <modules>
+        <module>parent</module>
+        <module>etc</module>
+        <module>buildingtools</module>
+        <module>camel-core</module>
+        <module>components</module>
+        <module>archetypes</module>
+        <module>tooling</module>
+        <module>platforms</module>
+        <module>connectors</module>
+        <module>tests</module>
+        <module>examples</module>
+      </modules>
+    </profile>
     <profile>
       <id>assembly</id>
       <activation>
