@@ -36,11 +36,13 @@ public class StompComponent extends HeaderFilterStrategyComponent implements SSL
     private String host;
     @Metadata(label = "security", defaultValue = "false")
     private boolean useGlobalSslContextParameters;
+    @Metadata(label = "advanced")
+    private boolean prependSlash = true;
 
     public StompComponent() {
         super(StompEndpoint.class);
     }
-    
+
     // Implementation methods
     // -------------------------------------------------------------------------
 
@@ -54,7 +56,13 @@ public class StompComponent extends HeaderFilterStrategyComponent implements SSL
 
     @Override
     protected Endpoint createEndpoint(String uri, String remaining, Map<String, Object> parameters) throws Exception {
-        String destination = "/" + remaining.replaceAll(":", "/");
+
+        final String destination;
+        if (prependSlash) {
+            destination = "/" + remaining.replaceAll(":", "/");
+        } else {
+            destination = remaining.replaceAll(":", "/");
+        }
 
         // must copy config so we do not have side effects
         StompConfiguration config = getConfiguration().copy();
@@ -62,11 +70,11 @@ public class StompComponent extends HeaderFilterStrategyComponent implements SSL
         setProperties(config, parameters);
 
         StompEndpoint endpoint = new StompEndpoint(uri, this, config, destination);
-        
-        // set header filter strategy and then call set properties 
+
+        // set header filter strategy and then call set properties
         // if user wants to add CustomHeaderFilterStrategy
         endpoint.setHeaderFilterStrategy(getHeaderFilterStrategy());
-        
+
         setProperties(endpoint, parameters);
 
         if (config.getSslContextParameters() == null) {
@@ -107,7 +115,7 @@ public class StompComponent extends HeaderFilterStrategyComponent implements SSL
     public void setPasscode(String passcode) {
         configuration.setPasscode(passcode);
     }
-    
+
     /**
      * The virtual host
      */
@@ -127,5 +135,18 @@ public class StompComponent extends HeaderFilterStrategyComponent implements SSL
     public void setUseGlobalSslContextParameters(boolean useGlobalSslContextParameters) {
         this.useGlobalSslContextParameters = useGlobalSslContextParameters;
     }
+
+    public boolean isPrependSlash() {
+        return prependSlash;
+    }
+
+    /**
+     * If {@code true} (default) a slash will be prepended to the destination name passed via
+     * endpoint URI; otherwise nothing will be prepended to the destination name.
+     */
+    public void setPrependSlash(boolean prependSlash) {
+        this.prependSlash = prependSlash;
+    }
+
 
 }
