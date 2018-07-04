@@ -51,11 +51,11 @@ import org.slf4j.LoggerFactory;
 
 /**
  * A Consumer of exchanges for a service in CXF.  CxfConsumer acts a CXF
- * service to receive requests, convert them, and forward them to Camel 
+ * service to receive requests, convert them, and forward them to Camel
  * route for processing. It is also responsible for converting and sending
  * back responses to CXF client.
  *
- * @version 
+ * @version
  */
 public class CxfConsumer extends DefaultConsumer {
     private static final Logger LOG = LoggerFactory.getLogger(CxfConsumer.class);
@@ -76,6 +76,7 @@ public class CxfConsumer extends DefaultConsumer {
         if (cxfEndpoint.getCxfEndpointConfigurer() != null) {
             cxfEndpoint.getCxfEndpointConfigurer().configureServer(server);
         }
+        server.getEndpoint().getEndpointInfo().setProperty("serviceClass", cxfEndpoint.getServiceClass());
         if (ObjectHelper.isNotEmpty(cxfEndpoint.getPublishedEndpointUrl())) {
             server.getEndpoint().getEndpointInfo().setProperty("publishedEndpointUrl", cxfEndpoint.getPublishedEndpointUrl());
         }
@@ -129,12 +130,12 @@ public class CxfConsumer extends DefaultConsumer {
     protected boolean isAsyncInvocationSupported(Exchange cxfExchange) {
         Message cxfMessage = cxfExchange.getInMessage();
         Object addressingProperties = cxfMessage.get(CxfConstants.WSA_HEADERS_INBOUND);
-        if (addressingProperties != null 
+        if (addressingProperties != null
                && !ContextUtils.isGenericAddress(getReplyTo(addressingProperties))) {
             //it's decoupled endpoint, so already switch thread and
-            //use executors, which means underlying transport won't 
-            //be block, so we shouldn't rely on continuation in 
-            //this case, as the SuspendedInvocationException can't be 
+            //use executors, which means underlying transport won't
+            //be block, so we shouldn't rely on continuation in
+            //this case, as the SuspendedInvocationException can't be
             //caught by underlying transport. So we should use the SyncInvocation this time
             return false;
         }
@@ -177,7 +178,7 @@ public class CxfConsumer extends DefaultConsumer {
 
                     // The continuation could be called before the suspend is called
                     continuation.suspend(cxfEndpoint.getContinuationTimeout());
-                    
+
                     continuation.setObject(camelExchange);
 
                     // use the asynchronous API to process the exchange
