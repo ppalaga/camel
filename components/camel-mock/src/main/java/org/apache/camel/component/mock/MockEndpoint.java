@@ -1725,6 +1725,7 @@ public class MockEndpoint extends DefaultEndpoint implements BrowsableEndpoint, 
      * @param copy a copy of the received exchange
      */
     protected void addReceivedExchange(Exchange copy) {
+        System.out.println("======= adding to mock:"+ name + ": " + copy.getMessage().getBody());
         if (retainFirst == 0 && retainLast == 0) {
             // do not retain any messages at all
         } else if (retainFirst < 0 && retainLast < 0) {

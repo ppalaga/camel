@@ -17,6 +17,7 @@
 package org.apache.camel.processor.dynamicrouter;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.camel.ContextTestSupport;
 import org.apache.camel.DynamicRouter;
@@ -94,10 +95,24 @@ public class DynamicRouterConcurrentPOJOTest extends ContextTestSupport {
         return new RouteBuilder() {
             public void configure() {
                 from("seda:a")
-                        .bean(new MyDynamicRouterPojo("mock:a"));
+                        .process(e -> {
+                            System.out.println("==== pipe a before " + e.getMessage().getBody());
+                        })
+                        .bean(new MyDynamicRouterPojo("mock:a"))
+                        .process(e -> {
+                            System.out.println("==== pipe a after " + e.getMessage().getBody() + " cnt "
+                                               + getMockEndpoint("mock:a").getReceivedCounter());
+                        });
 
                 from("seda:b")
-                        .bean(new MyDynamicRouterPojo("mock:b"));
+                        .process(e -> {
+                            System.out.println("==== pipe b before " + e.getMessage().getBody());
+                        })
+                        .bean(new MyDynamicRouterPojo("mock:b"))
+                        .process(e -> {
+                            System.out.println("==== pipe b after " + e.getMessage().getBody() + " cnt "
+                                               + getMockEndpoint("mock:b").getReceivedCounter());
+                        });
             }
         };
     }
@@ -105,6 +120,7 @@ public class DynamicRouterConcurrentPOJOTest extends ContextTestSupport {
     public static class MyDynamicRouterPojo {
 
         private final String target;
+        private AtomicInteger i = new AtomicInteger();
 
         public MyDynamicRouterPojo(String target) {
             this.target = target;
@@ -112,6 +128,27 @@ public class DynamicRouterConcurrentPOJOTest extends ContextTestSupport {
 
         @DynamicRouter
         public String route(@Header(Exchange.SLIP_ENDPOINT) String previous) {
+            System.out.println("=== routing " + target + "[" + i.getAndIncrement() + "] from prev " + previous);
+            if (previous == null) {
+                return target;
+            } else {
+                return null;
+            }
+        }
+    }
+
+    public static class MyDynamicRouterPojoB {
+
+        private final String target;
+        private AtomicInteger i = new AtomicInteger();
+
+        public MyDynamicRouterPojoB(String target) {
+            this.target = target;
+        }
+
+        @DynamicRouter
+        public String route(@Header(Exchange.SLIP_ENDPOINT) String previous) {
+            System.out.println("=== routing " + target + "[" + i.getAndIncrement() + "] from prev " + previous);
             if (previous == null) {
                 return target;
             } else {
