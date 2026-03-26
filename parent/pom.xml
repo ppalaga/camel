@@ -447,6 +447,7 @@
         <qpid-proton-j-version>0.33.10</qpid-proton-j-version>
         <qpid-jms-client-version>0.61.0</qpid-jms-client-version>
         <quartz-version>2.3.2</quartz-version>
+        <quarkus-extension-registry-base-url>https://registry.quarkus.io</quarkus-extension-registry-base-url>
         <quickfixj-version>2.3.1</quickfixj-version>
         <rabbitmq-amqp-client-version>5.14.0</rabbitmq-amqp-client-version>
         <rdf4j-rio-version>3.7.4</rdf4j-rio-version>
@@ -4746,7 +4747,7 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
         </profile>
-        
+
         <profile>
             <id>fastinstall</id>
             <activation>
