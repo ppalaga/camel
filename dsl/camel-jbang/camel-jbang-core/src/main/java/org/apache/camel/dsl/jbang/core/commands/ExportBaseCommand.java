@@ -1267,16 +1267,13 @@ public abstract class ExportBaseCommand extends CamelCommand {
         copyApplicationPropertiesFiles(srcResourcesDir.toPath());
     }
 
-    private MavenDownloader getDownloader() {
+    protected MavenDownloader getDownloader() {
         if (downloader == null) {
-            init();
+            MavenDownloaderImpl dnl = new MavenDownloaderImpl();
+            dnl.build();
+            this.downloader = dnl;
         }
         return downloader;
-    }
-
-    private void init() {
-        this.downloader = new MavenDownloaderImpl();
-        ((MavenDownloaderImpl) downloader).build();
     }
 
     protected Printer outPrinter() {

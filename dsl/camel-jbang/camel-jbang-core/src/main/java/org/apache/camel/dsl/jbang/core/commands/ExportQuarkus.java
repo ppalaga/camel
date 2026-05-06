@@ -24,6 +24,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -147,7 +148,11 @@ class ExportQuarkus extends Export {
         copyReadme(BUILD_DIR, appJar);
         // resolve Quarkus platform version from registry (when download is true)
         if (download) {
-            String resolved = QuarkusHelper.resolveQuarkusPlatformVersion(quarkusVersion);
+            String resolved = QuarkusHelper.resolveQuarkusPlatformVersion(
+                    quarkusVersion,
+                    camelVersion,
+                    getDownloader(),
+                    new LinkedHashSet<>(Arrays.asList(repositories.split(","))));
             if (resolved != null) {
                 quarkusVersion = resolved;
             }
