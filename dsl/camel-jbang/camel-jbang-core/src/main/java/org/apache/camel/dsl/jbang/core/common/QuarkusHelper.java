@@ -16,6 +16,9 @@
  */
 package org.apache.camel.dsl.jbang.core.common;
 
+import static org.apache.camel.dsl.jbang.core.common.CamelJBangConstants.QUARKUS_GROUP_ID;
+import static org.apache.camel.dsl.jbang.core.common.CamelJBangConstants.QUARKUS_VERSION;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -30,22 +33,22 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.function.BiConsumer;
-import java.util.function.BinaryOperator;
 import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import org.xml.sax.InputSource;
-
+import org.apache.camel.dsl.jbang.core.commands.version.VersionList.CamelAndRuntimeVersions;
 import org.apache.camel.tooling.maven.MavenArtifact;
 import org.apache.camel.tooling.maven.MavenDownloader;
 import org.apache.camel.tooling.maven.MavenGav;
@@ -54,9 +57,9 @@ import org.apache.camel.util.json.JsonArray;
 import org.apache.camel.util.json.JsonObject;
 import org.apache.camel.util.json.Jsoner;
 import org.apache.maven.artifact.versioning.ComparableVersion;
-
-import static org.apache.camel.dsl.jbang.core.common.CamelJBangConstants.QUARKUS_GROUP_ID;
-import static org.apache.camel.dsl.jbang.core.common.CamelJBangConstants.QUARKUS_VERSION;
+import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 /**
  * Helper for resolving Quarkus platform information from the Quarkus registry.
@@ -80,38 +83,25 @@ public final class QuarkusHelper {
         return System.getProperty(QUARKUS_PLATFORM_URL_PROPERTY, DEFAULT_QUARKUS_PLATFORM_URL);
     }
 
-    /**
-     * Resolves the actual Quarkus platform version for each row by fetching the Quarkus platform registry and matching
-     * the Camel Quarkus major.minor version against stream IDs.
-     *
-     * @param rows                 the list of rows to enrich with Quarkus platform versions
-     * @param runtimeVersionFunc   function to extract the runtime (Camel Quarkus) version from a row
-     * @param quarkusVersionSetter consumer to set the resolved Quarkus platform version on a row
-     */
-    public static <T> void resolveQuarkusPlatformVersions(
-            List<T> rows,
-            Function<T, String> runtimeVersionFunc,
-            BiConsumer<T, String> quarkusVersionSetter) {
-
+    public static Stream<CamelAndRuntimeVersions> listQuarkusPlatformVersions(Function<MavenGav, MavenArtifact> mavenResolver) {
         JsonArray streams = fetchPlatformStreams();
-        if (streams == null) {
-            return;
+        if (streams == null || streams.isEmpty()) {
+            return Stream.empty();
         }
+        return listQuarkusPlatformVersions(streams, mavenResolver);
+    }
 
-        // keep the row with the highest runtime version per major.minor stream
-        BinaryOperator<T> keepLatest = (a, b) -> VersionHelper.compare(
-                runtimeVersionFunc.apply(a), runtimeVersionFunc.apply(b)) >= 0 ? a : b;
-
-        Map<String, T> latestPerStream = rows.stream()
-                .filter(row -> runtimeVersionFunc.apply(row) != null)
-                .collect(Collectors.toMap(
-                        row -> VersionHelper.getMajorMinorVersion(runtimeVersionFunc.apply(row)),
-                        Function.identity(),
-                        keepLatest));
-
-        // match each major.minor against registry streams and set the quarkus version
-        latestPerStream.forEach((majorMinor, row) -> findStreamVersion(streams, majorMinor, "quarkus-core-version")
-                .ifPresent(version -> quarkusVersionSetter.accept(row, version)));
+    static Stream<CamelAndRuntimeVersions> listQuarkusPlatformVersions(
+            JsonArray streams,
+            Function<MavenGav, MavenArtifact> mavenResolver) {
+        return streams.stream()
+                .map(s -> (JsonObject) s)
+                .map(PlatformStream::of)
+                .flatMap(platformStream -> platformStream.platformReleases().stream())
+                .map(platformRelease -> {
+                    List<String> versions = platformRelease.findManagedVersions(mavenResolver, Ga.CAMEL_DIRECT, Ga.CAMEL_QUARKUS_DIRECT);
+                    return new CamelAndRuntimeVersions(versions.get(0), platformRelease.quarkusCamelBomGav.getVersion(), versions.get(1));
+                });
     }
 
     /**
@@ -193,25 +183,6 @@ public final class QuarkusHelper {
         } catch (DeserializationException e) {
             throw new RuntimeException("Unvalid JSON input from " + quarkusPlatformUrl, e);
         }
-    }
-
-    /**
-     * Finds a version field from the registry streams that matches the given major.minor stream ID.
-     *
-     * @param  streams    the streams array from the registry
-     * @param  majorMinor the major.minor version to match (e.g., "3.15")
-     * @param  fieldName  the field name to extract from the release ("version" or "quarkus-core-version")
-     * @return            the version string, or empty if not found
-     */
-    private static Optional<String> findStreamVersion(JsonArray streams, String majorMinor, String fieldName) {
-        return streams.stream()
-                .map(s -> (JsonObject) s)
-                .filter(stream -> majorMinor.equals(stream.getString("id")))
-                .findFirst()
-                .map(stream -> (JsonArray) stream.getCollection("releases"))
-                .filter(releases -> !releases.isEmpty())
-                .map(releases -> (JsonObject) releases.getMap(0))
-                .map(release -> release.getString(fieldName));
     }
 
     /**
@@ -310,16 +281,50 @@ public final class QuarkusHelper {
         }
     }
 
-    private record PlatformRelease(ComparableVersion platformVersion, String quarkusCamelBomGav) {
+    private record PlatformRelease(ComparableVersion platformVersion, MavenGav quarkusCamelBomGav) {
         static PlatformRelease of(JsonObject json) {
-            String quarkusCamelBomGav = json.getCollectionOrDefault("member-boms", List.of()).stream()
+            MavenGav quarkusCamelBomGav = json.getCollectionOrDefault("member-boms", List.of()).stream()
                     .map(o -> (String) o)
                     .filter(gav -> gav.contains(":quarkus-camel-bom:"))
                     .findFirst()
+                    .map(gav -> {
+                        String[] parts = gav.split(":");
+                        // the extension registry uses a rather unusual format g:a:[c]:t:v, so we have to parse it manually
+                        return MavenGav.fromCoordinates(parts[0], parts[1], parts[4], parts[3], parts[2]);
+                    })
                     .orElse(null);
             return new PlatformRelease(
                     new ComparableVersion(Objects.requireNonNull(json.getString("version"), "release.version")),
                     quarkusCamelBomGav);
+        }
+
+        public List<String> findManagedVersions(Function<MavenGav, MavenArtifact> mavenResolver, Ga... gas) {
+            final MavenArtifact artifact = mavenResolver.apply(quarkusCamelBomGav);
+            Path file = artifact.getFile().toPath();
+            if (!Files.isRegularFile(file)) {
+                throw new IllegalStateException(file + " should exist for " + quarkusCamelBomGav.toMavenResolverString());
+            }
+            XPath xPath = XPathFactory.newInstance().newXPath();
+            DocumentBuilderFactory dbf = XmlHelper.createDocumentBuilderFactory();
+            Document dom;
+            try (InputStream in = Files.newInputStream(file)) {
+                DocumentBuilder db = dbf.newDocumentBuilder();
+                dom = db.parse(in);
+            } catch (IOException e) {
+                throw new UncheckedIOException("Could not read " + file, e);
+            } catch (ParserConfigurationException | SAXException e) {
+                throw new RuntimeException("Could not parse file " + file);
+            }
+            return Stream.of(gas)
+            .map(ga -> managedDependencyVersionXPath(ga.groupId, ga.artifactId))
+            .map(expr -> {
+                try {
+                    return (String) xPath.evaluate(expr, dom, XPathConstants.STRING);
+                } catch (XPathExpressionException e) {
+                    throw new RuntimeException("Could not evaluate " + expr + " on file " + file);
+                }
+            })
+            .toList();
         }
     }
 
@@ -335,30 +340,14 @@ public final class QuarkusHelper {
                 PlatformRelease platformRelease,
                 Function<MavenGav, MavenArtifact> mavenResolver,
                 MajorMinor wantedCamelMajorMinor) {
-            String[] parts = platformRelease.quarkusCamelBomGav().split(":");
-            // the extension registry uses a rather unusual format g:a:[c]:t:v, so we have to parse it manually
-            final MavenGav cqBomGav = MavenGav.fromCoordinates(parts[0], parts[1], parts[4], parts[3], parts[2]);
-            final MavenArtifact artifact = mavenResolver.apply(cqBomGav);
-            Path file = artifact.getFile().toPath();
-            if (!Files.isRegularFile(file)) {
-                throw new IllegalStateException(file + " should exist for " + cqBomGav.toMavenResolverString());
-            }
-            XPath xPath = XPathFactory.newInstance().newXPath();
-            String expr = managedDependencyVersionXPath("org.apache.camel", "camel-direct");
-            try (InputStream in = Files.newInputStream(file)) {
-                String camelVersion = (String) xPath.evaluate(expr, new InputSource(in), XPathConstants.STRING);
-                MajorMinor camelMajorMinor = new MajorMinor(camelVersion);
-                BigInteger distance = camelMajorMinor.distanceTo(wantedCamelMajorMinor);
-                return new CamelVersionInPlatformRelease(
-                        camelVersion,
-                        camelMajorMinor,
-                        distance,
-                        platformRelease.platformVersion, artifact.getGav());
-            } catch (IOException e) {
-                throw new UncheckedIOException("Could not read " + file, e);
-            } catch (XPathExpressionException e) {
-                throw new RuntimeException("Could not evaluate " + expr + " on file " + file);
-            }
+            String camelVersion = platformRelease.findManagedVersions(mavenResolver, Ga.CAMEL_DIRECT).get(0);
+            MajorMinor camelMajorMinor = new MajorMinor(camelVersion);
+            BigInteger distance = camelMajorMinor.distanceTo(wantedCamelMajorMinor);
+            return new CamelVersionInPlatformRelease(
+                    camelVersion,
+                    camelMajorMinor,
+                    distance,
+                    platformRelease.platformVersion, platformRelease.quarkusCamelBomGav);
         }
 
         public QuarkusPlatformBom toQuarkusPlatformBom() {
@@ -372,6 +361,11 @@ public final class QuarkusHelper {
         }
     }
 
+    static record Ga(String groupId, String artifactId) {
+
+        public static final Ga CAMEL_DIRECT = new Ga("org.apache.camel", "camel-direct");
+        public static final Ga CAMEL_QUARKUS_DIRECT = new Ga("org.apache.camel.quarkus", "camel-quarkus-direct");
+    }
     static class MajorMinor {
         private final String source;
         private final int major;
