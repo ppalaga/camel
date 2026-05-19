@@ -105,7 +105,7 @@ public abstract class CatalogBaseCommand extends CamelCommand {
         } else if (RuntimeType.quarkus == runtime) {
             final MavenGav quarkusCamelBom
                     = quarkusPlatform
-                            .resolve(camelVersion, mavenResolver.downloader()::resolveArtifact)
+                            .resolve(camelVersion, mavenResolver.downloader()::resolveArtifact, mavenResolver.fresh())
                             .quarkusCamelBom();
             return CatalogLoader.loadQuarkusCatalog(quarkusCamelBom, mavenResolver.downloader()::resolveArtifact);
         }

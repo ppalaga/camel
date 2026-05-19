@@ -4207,7 +4207,7 @@ The follow options related to _exporting_ or _running_, can be configured in `ap
 
 // jbang options: START
 === Camel JBang configurations
-The camel.jbang supports 49 options, which are listed below.
+The camel.jbang supports 50 options, which are listed below.
 
 [width="100%",cols="2,5,^1,2",options="header"]
 |===
@@ -4224,6 +4224,7 @@ The camel.jbang supports 49 options, which are listed below.
 | *camel.jbang.download* | Whether to allow automatic downloading JAR dependencies (over the internet) | true | boolean
 | *camel.jbang.excludes* | Exclude files by name or pattern (Use commas to separate multiple files) |  | String
 | *camel.jbang.exportDir* | Directory where the project will be exported | . | String
+| *camel.jbang.fresh* | Whether to force usin fresh (i.e. non-cached) resources | true | boolean
 | *camel.jbang.gav* | Maven coordinate (groupId:artifactId:version) |  | String
 | *camel.jbang.groovyFiles* | Additional groovy source files to export to src/main/resources/camel-groovy directory (Use commas to separate multiple files) |  | String
 | *camel.jbang.health* | Health check at /observe/health on local HTTP server (port 8080 by default) | false | boolean

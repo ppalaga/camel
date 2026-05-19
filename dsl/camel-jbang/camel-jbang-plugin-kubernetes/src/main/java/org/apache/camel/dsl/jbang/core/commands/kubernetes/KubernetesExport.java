@@ -232,7 +232,7 @@ public class KubernetesExport extends Export {
         final CamelCatalog catalog;
         if (runtime == RuntimeType.quarkus) {
             MavenGav camelQuarkusBom = quarkusPlatform
-                    .resolve(camelVersion, mavenResolver.downloader()::resolveArtifact)
+                    .resolve(camelVersion, mavenResolver.downloader()::resolveArtifact, mavenResolver.fresh())
                     .quarkusCamelBom();
             catalog = CatalogLoader.loadQuarkusCatalog(camelQuarkusBom, mavenResolver.downloader()::resolveArtifact);
         } else if (runtime == RuntimeType.springBoot) {

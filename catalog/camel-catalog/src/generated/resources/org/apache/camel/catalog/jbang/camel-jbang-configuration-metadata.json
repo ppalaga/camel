@@ -15,6 +15,7 @@
     { "name": "camel.jbang.download", "required": false, "description": "Whether to allow automatic downloading JAR dependencies (over the internet)", "type": "boolean", "javaType": "boolean", "defaultValue": true, "secret": false },
     { "name": "camel.jbang.excludes", "required": false, "description": "Exclude files by name or pattern (Use commas to separate multiple files)", "type": "string", "javaType": "String", "secret": false },
     { "name": "camel.jbang.exportDir", "required": false, "description": "Directory where the project will be exported", "type": "string", "javaType": "String", "defaultValue": ".", "secret": false },
+    { "name": "camel.jbang.fresh", "required": false, "description": "Whether to force usin fresh (i.e. non-cached) resources", "type": "boolean", "javaType": "boolean", "defaultValue": true, "secret": false },
     { "name": "camel.jbang.gav", "required": false, "description": "Maven coordinate (groupId:artifactId:version)", "type": "string", "javaType": "String", "secret": false },
     { "name": "camel.jbang.groovyFiles", "required": false, "description": "Additional groovy source files to export to src\/main\/resources\/camel-groovy directory (Use commas to separate multiple files)", "type": "string", "javaType": "String", "secret": false },
     { "name": "camel.jbang.health", "required": false, "description": "Health check at \/observe\/health on local HTTP server (port 8080 by default)", "type": "boolean", "javaType": "boolean", "defaultValue": false, "secret": false, "deprecated": true },

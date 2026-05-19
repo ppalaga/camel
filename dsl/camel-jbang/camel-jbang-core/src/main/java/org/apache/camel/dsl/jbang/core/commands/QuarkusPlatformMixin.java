@@ -62,14 +62,17 @@ public class QuarkusPlatformMixin extends QuarkusExtensionRegistryMixin implemen
      * @param  mavenDownloader the {@link MavenDownloader} to use for resolving Maven Artifacts
      * @return                 a new {@link QuarkusPlatformBom}
      */
-    public QuarkusPlatformBom resolve(String camelVersion, Function<MavenGav, MavenArtifact> mavenDownloader) {
+    public QuarkusPlatformBom resolve(
+            String camelVersion,
+            Function<MavenGav, MavenArtifact> mavenDownloader,
+            boolean fresh) {
         if (quarkusVersion != null) {
             MavenGav quarkusCamelBom
                     = MavenGav.fromCoordinates(quarkusGroupId, "quarkus-camel-bom", quarkusVersion, "pom", null);
             String cv = QuarkusHelper.resolveCamelVersionFromQuarkusCamelBom(quarkusCamelBom, mavenDownloader);
             return new QuarkusPlatformBom(quarkusGroupId, quarkusVersion, cv, quarkusExtensioRegistryBaseUri);
         } else {
-            return QuarkusHelper.findQuarkusPlatformBom(camelVersion, mavenDownloader, quarkusExtensioRegistryBaseUri());
+            return QuarkusHelper.findQuarkusPlatformBom(camelVersion, mavenDownloader, quarkusExtensioRegistryBaseUri(), fresh);
         }
     }
 

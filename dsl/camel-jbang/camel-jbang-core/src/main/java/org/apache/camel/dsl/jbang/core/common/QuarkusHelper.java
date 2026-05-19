@@ -26,8 +26,13 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -75,12 +80,27 @@ public final class QuarkusHelper {
     }
 
     public static Stream<CamelAndRuntimeVersions> listQuarkusPlatformVersions(
-            Function<MavenGav, MavenArtifact> mavenResolver, String quarkusExtensioRegistryBaseUri) {
-        JsonArray streams = fetchPlatformStreams(quarkusExtensioRegistryBaseUri, false);
+            Function<MavenGav, MavenArtifact> mavenResolver,
+            String quarkusExtensioRegistryBaseUri,
+            boolean fresh) {
+        JsonArray streams = fetchPlatformStreams(quarkusExtensioRegistryBaseUri, fresh, registriesDir());
         if (streams == null || streams.isEmpty()) {
             return Stream.empty();
         }
         return listQuarkusPlatformVersions(streams, mavenResolver);
+    }
+
+    private static Path registriesDir() {
+        final Path regDir = CommandLineHelper.getCamelDir().resolve("quarkus-extension-registries");
+        try {
+            if (!Files.isDirectory(regDir)) {
+                Files.createDirectories(regDir);
+            }
+            return regDir
+                    .toRealPath(LinkOption.NOFOLLOW_LINKS);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not get real path for " + regDir, e);
+        }
     }
 
     static Stream<CamelAndRuntimeVersions> listQuarkusPlatformVersions(
@@ -115,12 +135,15 @@ public final class QuarkusHelper {
      *                                        buildTimeVersion if resolution fails
      */
     public static QuarkusPlatformBom findQuarkusPlatformBom(
-            String camelVersion, Function<MavenGav, MavenArtifact> mavenResolver, String quarkusExtensioRegistryBaseUri) {
+            String camelVersion,
+            Function<MavenGav, MavenArtifact> mavenResolver,
+            String quarkusExtensioRegistryBaseUri,
+            boolean fresh) {
         if (camelVersion == null) {
             camelVersion = RuntimeType.main.version();
         }
 
-        JsonArray streams = fetchPlatformStreams(quarkusExtensioRegistryBaseUri, true);
+        JsonArray streams = fetchPlatformStreams(quarkusExtensioRegistryBaseUri, fresh, registriesDir());
         if (streams == null || streams.isEmpty()) {
             return null;
         }
@@ -149,15 +172,34 @@ public final class QuarkusHelper {
      *
      * @return the streams JsonArray, or null if the registry is unreachable or the response is invalid
      */
-    private static JsonArray fetchPlatformStreams(String quarkusExtensioRegistryBaseUri, boolean ltsAndLatestOnly) {
+    static JsonArray fetchPlatformStreams(String quarkusExtensioRegistryBaseUri, boolean fresh, Path registriesDir) {
         final String quarkusPlatformUrl = quarkusExtensioRegistryBaseUri
-                                          + (ltsAndLatestOnly ? "/client/platforms" : "/client/platforms/all")
+                                          + "/client/platforms/all"
                                           + (quarkusExtensioRegistryBaseUri.startsWith("file://") ? ".json" : "");
         try {
             final URI uri = new URI(quarkusPlatformUrl);
             if (uri.getScheme().equals("file")) {
                 return deserialize(Files.readString(Path.of(uri)));
             }
+
+            if (!fresh) {
+                Path cacheFile = cacheFile(uri, registriesDir);
+                /* Check whether there is a cached document */
+                if (Files.isRegularFile(cacheFile)) {
+                    FileTime lastModified = Files.getLastModifiedTime(cacheFile);
+
+                    final ZoneId zone = ZoneId.systemDefault();
+                    final Instant startOfToday = LocalDate.now(zone)
+                            .atStartOfDay(zone)
+                            .toInstant();
+
+                    if (!lastModified.toInstant().isBefore(startOfToday)) {
+                        /* refresh once a day */
+                        return deserialize(Files.readString(cacheFile));
+                    }
+                }
+            }
+
             HttpClient hc = HttpClient.newHttpClient();
             HttpResponse<String> res = hc.send(
                     HttpRequest.newBuilder(uri)
@@ -166,7 +208,14 @@ public final class QuarkusHelper {
                     HttpResponse.BodyHandlers.ofString());
 
             if (res.statusCode() == 200) {
-                return deserialize(res.body());
+                final String jsonBody = res.body();
+
+                /* Refresh the cached file */
+                Path cacheFile = cacheFile(uri, registriesDir);
+                Files.createDirectories(cacheFile.getParent());
+                Files.writeString(cacheFile, jsonBody);
+
+                return deserialize(jsonBody);
             }
             return new JsonArray();
         } catch (InterruptedException e) {
@@ -179,6 +228,20 @@ public final class QuarkusHelper {
         } catch (DeserializationException e) {
             throw new RuntimeException("Unvalid JSON input from " + quarkusPlatformUrl, e);
         }
+    }
+
+    private static Path cacheFile(URI uri, Path registriesDir) {
+        String relPath = uri.getPath();
+        if (relPath != null && relPath.startsWith("/")) {
+            relPath = relPath.substring(1);
+        }
+        final Path cacheFile = registriesDir.resolve(uri.getHost()).resolve(relPath + ".json").normalize();
+        if (!cacheFile.startsWith(registriesDir)) {
+            throw new IllegalStateException(
+                    "Could not create a safe cache directory for " + uri + ": " + cacheFile + " is not under "
+                                            + registriesDir);
+        }
+        return cacheFile;
     }
 
     private static JsonArray deserialize(String jsonString) throws DeserializationException {

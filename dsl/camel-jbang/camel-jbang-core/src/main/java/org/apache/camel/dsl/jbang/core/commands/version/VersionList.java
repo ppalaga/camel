@@ -148,10 +148,6 @@ public class VersionList extends CamelCommand {
                         description = "The number of lines from the end of the table to show.")
     public int tail;
 
-    @CommandLine.Option(names = { "--fresh" }, description = "Make sure we use fresh (i.e. non-cached) resources",
-                        defaultValue = "false")
-    public boolean fresh;
-
     @CommandLine.Option(names = { "--json" }, description = "Output in JSON Format", defaultValue = "false")
     public boolean jsonOutput;
 
@@ -182,7 +178,7 @@ public class VersionList extends CamelCommand {
 
         // only download if fresh, using a custom repo, or special runtime based
         Stream<CamelAndRuntimeVersions> versions;
-        if (mavenResolver.download() || fresh || mavenResolver.repos() != null || runtime != RuntimeType.main) {
+        if (mavenResolver.download() || mavenResolver.fresh() || mavenResolver.repos() != null || runtime != RuntimeType.main) {
             versions = downloadReleases();
         } else {
             versions = Stream.of();
@@ -238,7 +234,7 @@ public class VersionList extends CamelCommand {
         }
 
         JsonObject checker = loadCheckerFile();
-        if (fresh && mavenResolver.download()) {
+        if (mavenResolver.fresh() && mavenResolver.download()) {
             checker = updateCheckerFile(checker, runtime.runtime(), mavenResolver.repos());
         }
 
@@ -361,12 +357,15 @@ public class VersionList extends CamelCommand {
 
     Stream<CamelAndRuntimeVersions> downloadReleases() {
         if (RuntimeType.quarkus == runtime) {
-            return QuarkusHelper.listQuarkusPlatformVersions(mavenResolver.downloader()::resolveArtifact,
-                    quarkusExtensionRegistry.quarkusExtensioRegistryBaseUri());
+            /* We do not need KameletMain for Quarkus */
+            return QuarkusHelper.listQuarkusPlatformVersions(
+                    mavenResolver.downloader()::resolveArtifact,
+                    quarkusExtensionRegistry.quarkusExtensioRegistryBaseUri(),
+                    mavenResolver.fresh());
         }
         KameletMain main = new KameletMain(CAMEL_INSTANCE_TYPE);
         try {
-            main.setFresh(fresh);
+            main.setFresh(mavenResolver.fresh());
             main.setDownload(mavenResolver.download());
             main.setRepositories(mavenResolver.repos());
             main.start();

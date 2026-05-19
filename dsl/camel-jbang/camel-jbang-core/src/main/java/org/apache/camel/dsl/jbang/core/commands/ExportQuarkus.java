@@ -83,7 +83,7 @@ class ExportQuarkus extends Export {
 
         // the settings file has information what to export
         Path settings = CommandLineHelper.getWorkDir().resolve(Run.RUN_SETTINGS_FILE);
-        if (fresh || !files.isEmpty() || !Files.exists(settings)) {
+        if (mavenResolver.fresh() || !files.isEmpty() || !Files.exists(settings)) {
             // allow to automatic build
             printer().println("Generating fresh run data");
             int silent = runSilently(ignoreLoadingError, lazyBean, verbose);
@@ -250,7 +250,8 @@ class ExportQuarkus extends Export {
     private QuarkusPlatformBom getQuarkusCamelBom() {
         if (quarkusCamelBom == null) {
             // resolve Quarkus platform version from registry (when download is true)
-            quarkusCamelBom = quarkusPlatform.resolve(camelVersion, mavenResolver.downloader()::resolveArtifact);
+            quarkusCamelBom
+                    = quarkusPlatform.resolve(camelVersion, mavenResolver.downloader()::resolveArtifact, mavenResolver.fresh());
         }
         return quarkusCamelBom;
     }

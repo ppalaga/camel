@@ -476,7 +476,7 @@ public class Debug extends Run {
             mp.setBuild(b);
 
             MavenGav quarkusMavenPlugin = quarkusPlatform
-                    .resolve(camelVersion, mavenResolver.downloader()::resolveArtifact)
+                    .resolve(camelVersion, mavenResolver.downloader()::resolveArtifact, mavenResolver.fresh())
                     .quarkusMavenPlugin();
             Plugin pi = new Plugin();
             b.addPlugin(pi);

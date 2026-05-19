@@ -233,9 +233,6 @@ public class Run extends CamelCommand {
             description = "Whether downloading JARs from ASF Maven Snapshot repository is enabled")
     boolean mavenApacheSnapshotEnabled = true;
 
-    @Option(names = { "--fresh" }, defaultValue = "false", description = "Make sure we use fresh (i.e. non-cached) resources")
-    boolean fresh;
-
     @CommandLine.Mixin
     MavenResolverMixin mavenResolver;
 
@@ -630,7 +627,7 @@ public class Run extends CamelCommand {
         }
         main.setDownload(mavenResolver.download());
         main.setPackageScanJars(packageScanJars);
-        main.setFresh(fresh);
+        main.setFresh(mavenResolver.fresh());
         main.setMavenSettings(mavenSettings);
         main.setMavenSettingsSecurity(mavenSettingsSecurity);
         main.setMavenCentralEnabled(mavenCentralEnabled);
@@ -694,8 +691,10 @@ public class Run extends CamelCommand {
             writeSetting(main, profileProperties, GAV, gav);
         }
         writeSetting(main, profileProperties, OPEN_API, openapi);
-        if (mavenResolver.repos() != null) {
-            writeSetting(main, profileProperties, REPOS, mavenResolver.repos());
+        if (mavenResolver != null) {
+            mavenResolver.putTo((k, v) -> {
+                writeSetting(main, profileProperties, k, v);
+            });
         }
         writeSetting(main, profileProperties, HEALTH, serverOptions.health ? "true" : "false");
         writeSetting(main, profileProperties, METRICS, serverOptions.metrics ? "true" : "false");
@@ -707,7 +706,7 @@ public class Run extends CamelCommand {
 
         if (quarkusPlatform != null) {
             QuarkusPlatformBom platformBoms
-                    = quarkusPlatform.resolve(camelVersion, mavenResolver.downloader()::resolveArtifact);
+                    = quarkusPlatform.resolve(camelVersion, mavenResolver.downloader()::resolveArtifact, mavenResolver.fresh());
             platformBoms.putTo((k, v) -> {
                 writeSetting(main, profileProperties, k, v);
             });
@@ -1219,7 +1218,6 @@ public class Run extends CamelCommand {
         }
         eq.dependencies = this.dependencies;
         eq.addDependencies("camel:cli-connector");
-        eq.fresh = this.fresh;
         eq.mavenResolver = this.mavenResolver;
         eq.skipPlugins = this.skipPlugins;
         eq.packageScanJars = this.packageScanJars;
@@ -1336,7 +1334,6 @@ public class Run extends CamelCommand {
             // hot-reload of spring-boot
             eq.addDependencies("mvn:org.springframework.boot:spring-boot-devtools");
         }
-        eq.fresh = this.fresh;
         eq.skipPlugins = this.skipPlugins;
         eq.packageScanJars = this.packageScanJars;
         eq.quiet = true;

@@ -221,6 +221,10 @@ public final class CamelJBangConstants {
               javaType = "boolean", defaultValue = "true")
     public static final String DOWNLOAD = "camel.jbang.download";
 
+    @Metadata(description = "Whether to force usin fresh (i.e. non-cached) resources",
+              javaType = "boolean", defaultValue = "true")
+    public static final String FRESH = "camel.jbang.fresh";
+
     @Metadata(description = "Whether to automatic package scan JARs for custom Spring or Quarkus beans making them available for Camel JBang",
               javaType = "boolean", label = "advanced")
     public static final String PACKAGE_SCAN_JARS = "camel.jbang.packageScanJars";

@@ -99,7 +99,8 @@ public class CatalogService {
                         = QuarkusHelper.findQuarkusPlatformBom(
                                 camelVersion,
                                 downloader()::resolveArtifact,
-                                RuntimeType.QUARKUS_EXTENSION_REGISTRY_BASE_URL).quarkusCamelBom();
+                                RuntimeType.QUARKUS_EXTENSION_REGISTRY_BASE_URL,
+                                false).quarkusCamelBom();
                 normalizedVersion = platformBomGav.getVersion();
             }
         }

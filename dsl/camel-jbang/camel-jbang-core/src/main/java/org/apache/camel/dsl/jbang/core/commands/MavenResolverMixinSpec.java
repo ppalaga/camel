@@ -20,4 +20,6 @@ public interface MavenResolverMixinSpec {
     String repos();
 
     boolean download();
+
+    boolean fresh();
 }

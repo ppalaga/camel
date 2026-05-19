@@ -21,8 +21,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import org.apache.camel.dsl.jbang.core.common.QuarkusHelper.CamelVersionInPlatformRelease;
 import org.apache.camel.dsl.jbang.core.common.QuarkusHelper.MajorMinor;
 import org.apache.camel.dsl.jbang.core.common.QuarkusHelper.QuarkusPlatformBom;
@@ -35,8 +39,15 @@ import org.apache.camel.util.json.Jsoner;
 import org.apache.maven.artifact.versioning.ComparableVersion;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class QuarkusHelperTest {
+
+    @RegisterExtension
+    static WireMockExtension wireMock = WireMockExtension.newInstance()
+            .options(WireMockConfiguration.wireMockConfig().dynamicPort())
+            .build();
+
     @Test
     void findPlatformVersion() throws IOException, DeserializationException {
 
@@ -133,5 +144,27 @@ public class QuarkusHelperTest {
 
     private void assertDistance(String a, String b, long expected) {
         Assertions.assertThat(new MajorMinor(a).distanceTo(new MajorMinor(b))).isEqualTo(expected);
+    }
+
+    @Test
+    void cache() throws IOException {
+        final Path registriesDir
+                = Path.of("target/" + QuarkusHelperTest.class.getSimpleName() + "-" + UUID.randomUUID() + "/registries");
+        Files.createDirectories(registriesDir);
+        final String allPlatformsJson
+                = Files.readString(Path.of("target/test-classes/registry.quarkus.io/client/platforms/all.json"));
+        wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/client/platforms/all"))
+                .willReturn(WireMock.ok()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(allPlatformsJson)));
+        JsonArray arr = QuarkusHelper.fetchPlatformStreams(wireMock.baseUrl(), false, registriesDir);
+
+        Assertions.assertThat(registriesDir.resolve("localhost/client/platforms/all.json")).hasContent(allPlatformsJson);
+
+        wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/client/platforms/all"))
+                .willReturn(WireMock.forbidden()));
+        /* Another call should hit the cache instead of getting from the server */
+        JsonArray arr2 = QuarkusHelper.fetchPlatformStreams(wireMock.baseUrl(), false, registriesDir);
+        Assertions.assertThat(arr2).isEqualTo(arr);
     }
 }

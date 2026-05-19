@@ -226,7 +226,6 @@ public class Export extends ExportBaseCommand {
         cmd.exportDir = this.exportDir;
         cmd.cleanExportDir = this.cleanExportDir;
         cmd.yes = this.yes;
-        cmd.fresh = this.fresh;
         cmd.skipPlugins = this.skipPlugins;
         cmd.packageScanJars = this.packageScanJars;
         cmd.javaVersion = this.javaVersion;

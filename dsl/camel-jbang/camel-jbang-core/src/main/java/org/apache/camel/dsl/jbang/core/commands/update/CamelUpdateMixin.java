@@ -105,7 +105,7 @@ public class CamelUpdateMixin {
         } else {
             QuarkusPlatformBom result
                     = QuarkusHelper.findQuarkusPlatformBom(version, mavenResolver.downloader()::resolveArtifact,
-                            quarkusExtensionRegistry.quarkusExtensioRegistryBaseUri());
+                            quarkusExtensionRegistry.quarkusExtensioRegistryBaseUri(), mavenResolver.fresh());
             return result.quarkusMavenPlugin();
         }
     }

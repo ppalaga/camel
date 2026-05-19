@@ -17,6 +17,7 @@
 package org.apache.camel.dsl.jbang.core.commands;
 
 import java.util.Properties;
+import java.util.function.BiConsumer;
 
 import org.apache.camel.dsl.jbang.core.common.CamelJBangConstants;
 import org.apache.camel.tooling.maven.MavenDownloader;
@@ -37,6 +38,10 @@ public class MavenResolverMixin implements MavenResolverMixinSpec {
             "--repos" }, description = "Additional maven repositories for download on-demand (Use commas to separate multiple repositories)")
     String repos;
 
+    @CommandLine.Option(names = { "--fresh" }, description = "Make sure we use fresh (i.e. non-cached) resources",
+                        defaultValue = "false")
+    boolean fresh;
+
     private volatile MavenDownloader downloader;
     private final Object downloaderLock = new Object();
 
@@ -45,6 +50,7 @@ public class MavenResolverMixin implements MavenResolverMixinSpec {
         result.download
                 = Boolean.parseBoolean(props.getProperty(CamelJBangConstants.DOWNLOAD, String.valueOf(fallback.download())));
         result.repos = props.getProperty(CamelJBangConstants.REPOS, fallback.repos());
+        result.fresh = Boolean.parseBoolean(props.getProperty(CamelJBangConstants.FRESH, String.valueOf(fallback.fresh())));
         return result;
     }
 
@@ -71,11 +77,27 @@ public class MavenResolverMixin implements MavenResolverMixinSpec {
                         d.setRepos(repos);
                     }
                     d.setOffline(!download);
+                    d.setFresh(fresh);
                     d.build();
                     downloader = d;
                 }
             }
         }
         return d;
+    }
+
+    public boolean fresh() {
+        return fresh;
+    }
+
+    /**
+     * Put {@link #download}, {@link #repos} and {@link fresh} to the given {@link Properties}.
+     *
+     * @param properties the destination
+     */
+    public void putTo(BiConsumer<String, String> properties) {
+        properties.accept(CamelJBangConstants.DOWNLOAD, String.valueOf(download));
+        properties.accept(CamelJBangConstants.REPOS, repos);
+        properties.accept(CamelJBangConstants.FRESH, String.valueOf(fresh));
     }
 }

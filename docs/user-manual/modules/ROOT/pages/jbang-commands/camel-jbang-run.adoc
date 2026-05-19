@@ -31,7 +31,6 @@ camel run [options]
 | `--example` | Run a built-in example by name (e.g., timer-log, rest-api). Use --example --list to show available examples. |  | String
 | `--example-list` | List available built-in examples |  | boolean
 | `--exclude` | Exclude files by name or pattern |  | List
-| `--fresh` | Make sure we use fresh (i.e. non-cached) resources | false | boolean
 | `--gav` | The Maven group:artifact:version (used during exporting) |  | String
 | `--health` _(deprecated)_ | Deprecated: use --observe instead. Health check at /q/health on local HTTP server (port 8080 by default) | false | boolean
 | `--ignore-loading-error` | Whether to ignore route loading and compilation errors (use this with care!) | false | boolean

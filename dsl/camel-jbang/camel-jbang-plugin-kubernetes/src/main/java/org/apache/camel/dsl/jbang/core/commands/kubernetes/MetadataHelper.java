@@ -253,7 +253,8 @@ public class MetadataHelper {
                     .findQuarkusPlatformBom(
                             RuntimeType.main.version(),
                             d::resolveArtifact,
-                            RuntimeType.QUARKUS_EXTENSION_REGISTRY_BASE_URL)
+                            RuntimeType.QUARKUS_EXTENSION_REGISTRY_BASE_URL,
+                            false)
                     .version();
         }
         ClassResolver classResolver = new DependencyDownloaderClassResolver(

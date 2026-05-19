@@ -429,7 +429,8 @@ public class KubernetesRun extends KubernetesBaseCommand {
 
         final QuarkusPlatformBom quarkusPlatformBoms;
         if (runtime == RuntimeType.quarkus) {
-            quarkusPlatformBoms = quarkusPlatform.resolve(camelVersion, mavenResolver.downloader()::resolveArtifact);
+            quarkusPlatformBoms
+                    = quarkusPlatform.resolve(camelVersion, mavenResolver.downloader()::resolveArtifact, mavenResolver.fresh());
         } else {
             quarkusPlatformBoms
                     = new QuarkusPlatformBom(null, null, camelVersion, quarkusPlatform.quarkusExtensioRegistryBaseUri());

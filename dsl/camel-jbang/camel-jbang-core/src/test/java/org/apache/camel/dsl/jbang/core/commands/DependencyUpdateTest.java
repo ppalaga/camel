@@ -61,7 +61,7 @@ class DependencyUpdateTest extends CamelCommandBaseTestSupport {
     @MethodSource("runtimeProvider")
     void shouldDependencyUpdate(RuntimeType rt) throws Exception {
         prepareMavenProject(rt);
-        checkNoUpdateOnFreshlyGeneratedproject();
+        checkNoUpdateOnFreshlyGeneratedproject(rt);
         addArangodbToCamelFile();
         checkOneDependencyAddedForArangoDb(rt);
     }
@@ -97,12 +97,16 @@ class DependencyUpdateTest extends CamelCommandBaseTestSupport {
         }
     }
 
-    private void checkNoUpdateOnFreshlyGeneratedproject() throws Exception {
+    private void checkNoUpdateOnFreshlyGeneratedproject(RuntimeType rt) throws Exception {
         DependencyUpdate command = new DependencyUpdate(new CamelJBangMain().withPrinter(printer));
         CommandLine.populateCommand(command,
                 "--dir=" + workingDir,
+                "--camel-version=4.13.0",
                 CamelCommandBaseTestSupport.quarkusExtRegistry(),
                 new File(workingDir, "pom.xml").getAbsolutePath());
+        if (rt == RuntimeType.main) {
+            System.out.println("");
+        }
         int exit = command.doCall();
         Assertions.assertEquals(0, exit, printer.getLines().toString());
 
